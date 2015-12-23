@@ -1,13 +1,14 @@
 class Httpd24 < Formula
+  desc "HTTP server"
   homepage "https://httpd.apache.org/"
-  url "https://archive.apache.org/dist/httpd/httpd-2.4.17.tar.bz2"
-  sha256 "331e035dec81d3db95b048f036f4d7b1a97ec8daa5b377bde42d4ccf1f2eb798"
-  revision 1
+  url "https://archive.apache.org/dist/httpd/httpd-2.4.18.tar.bz2"
+  sha256 "0644b050de41f5c9f67c825285049b144690421acb709b06fe53eddfa8a9fd4c"
 
   bottle do
-    sha256 "a7744efed0e6bd8dc4eb6926a0f678593b6f18587dde83dc4a902036601f7eb2" => :yosemite
-    sha256 "db2b2d4763fcd96080556ae2cbdf2cfb70f0d86b42d0ea61f763b5a136357a59" => :mavericks
-    sha256 "ef80df482e837e5cae17a1f388fc4e60ae57f9a354eb1403843cf9dbcb9ecf17" => :mountain_lion
+    revision 1
+    sha256 "e42f84b204594b68e19a7881cf298db5a48d3246b611c5b1657754e2b1fbb97e" => :el_capitan
+    sha256 "7cf68e02a013b9779eb7b5f4391881f74d803c6cccd90895806ddcf108338624" => :yosemite
+    sha256 "6ac23f6e09c8ac706e952a8a0aa88ef4649cf8aafd91927723168a61c680e985" => :mavericks
   end
 
   conflicts_with "homebrew/apache/httpd22", :because => "different versions of the same software"
@@ -34,9 +35,8 @@ class Httpd24 < Formula
     depends_on "nghttp2"
   end
 
-  if build.with? "mpm-worker" and build.with? "mpm-event"
-    onoe "Cannot build with both worker and event MPMs, choose one"
-    exit 1
+  if build.with?("mpm-worker") && build.with?("mpm-event")
+    raise "Cannot build with both worker and event MPMs, choose one"
   end
 
   def install
@@ -68,13 +68,12 @@ class Httpd24 < Formula
       --enable-cgid
       --enable-suexec
       --enable-rewrite
+      --with-apr=#{Formula["apr"].opt_prefix}
+      --with-apr-util=#{Formula["apr-util"].opt_prefix}
+      --with-pcre=#{Formula["pcre"].opt_prefix}
+      --with-ssl=#{Formula["openssl"].opt_prefix}
+      --with-z=#{Formula["zlib"].opt_prefix}
     ]
-
-    args << "--with-apr=#{Formula["apr"].opt_prefix}"
-    args << "--with-apr-util=#{Formula["apr-util"].opt_prefix}"
-    args << "--with-pcre=#{Formula['pcre'].opt_prefix}"
-    args << "--with-ssl=#{Formula['openssl'].opt_prefix}"
-    args << "--with-z=#{Formula['zlib'].opt_prefix}"
 
     if build.with? "mpm-worker"
       args << "--with-mpm=worker"
@@ -85,22 +84,17 @@ class Httpd24 < Formula
     end
 
     if build.with? "privileged-ports"
-      args << "--with-port=80"
-      args << "--with-sslport=443"
+      args << "--with-port=80" << "--with-sslport=443"
     else
-      args << "--with-port=8080"
-      args << "--with-sslport=8443"
+      args << "--with-port=8080" << "--with-sslport=8443"
     end
 
     if build.with? "http2"
-      args << "--enable-http2"
-      args << "--with-nghttp2=#{Formula["nghttp2"].opt_prefix}"
+      args << "--enable-http2" << "--with-nghttp2=#{Formula["nghttp2"].opt_prefix}"
     end
 
     if build.with? "ldap"
-      args << "--with-ldap"
-      args << "--enable-ldap"
-      args << "--enable-authnz-ldap"
+      args << "--with-ldap" << "--enable-ldap" << "--enable-authnz-ldap"
     end
 
     (etc/"apache2/2.4").mkpath
@@ -108,11 +102,11 @@ class Httpd24 < Formula
     system "./configure", *args
 
     system "make"
-    system "make install"
+    system "make", "install"
     (var/"apache2/log").mkpath
     (var/"apache2/run").mkpath
-    touch("#{var}/log/apache2/access_log") unless File.exists?("#{var}/log/apache2/access_log")
-    touch("#{var}/log/apache2/error_log") unless File.exists?("#{var}/log/apache2/error_log")
+    touch("#{var}/log/apache2/access_log") unless File.exist?("#{var}/log/apache2/access_log")
+    touch("#{var}/log/apache2/error_log") unless File.exist?("#{var}/log/apache2/error_log")
   end
 
   def plist; <<-EOS.undent
@@ -124,7 +118,7 @@ class Httpd24 < Formula
       <string>#{plist_name}</string>
       <key>ProgramArguments</key>
       <array>
-        <string>#{opt_sbin}/httpd</string>
+        <string>#{opt_bin}/httpd</string>
         <string>-D</string>
         <string>FOREGROUND</string>
       </array>
@@ -136,12 +130,12 @@ class Httpd24 < Formula
   end
 
   def httpd_layout
-    return <<-EOS.undent
+    <<-EOS.undent
       <Layout Homebrew>
           prefix:        #{prefix}
           exec_prefix:   ${prefix}
           bindir:        ${exec_prefix}/bin
-          sbindir:       ${exec_prefix}/sbin
+          sbindir:       ${exec_prefix}/bin
           libdir:        ${exec_prefix}/lib
           libexecdir:    ${exec_prefix}/libexec
           mandir:        #{man}
@@ -159,11 +153,7 @@ class Httpd24 < Formula
           logfiledir:    #{var}/log/apache2
           proxycachedir: ${localstatedir}/proxy
       </Layout>
-      EOS
-  end
-
-  test do
-    system sbin/"httpd", "-v"
+    EOS
   end
 
   def caveats
@@ -182,5 +172,9 @@ class Httpd24 < Formula
       If not using --with-privileged-ports, use the instructions below.
       EOS
     end
+  end
+
+  test do
+    system bin/"httpd", "-v"
   end
 end
