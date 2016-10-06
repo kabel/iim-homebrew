@@ -29,7 +29,7 @@ cp formula/php70* /usr/local/Library/Taps/homebrew/homebrew-php/Formula
 
 # Install common formulae
 brew install Caskroom/cask/xquartz
-brew install curl
+brew install --with-openssl curl
 brew install gd
 brew install git
 brew install httpd24 --with-privileged-ports --with-mpm-event --with-http2 --with-ldap
@@ -39,7 +39,8 @@ brew install links
 brew install media-info
 brew install mysql
 brew install node
-brew install php70 php70-intl php70-mcrypt php70-opcache php70-tidy php70-xdebug
+brew install --with-homebrew-curl php70
+brew install php70-intl php70-mcrypt php70-opcache php70-tidy php70-xdebug
 brew install --HEAD php70-memcached
 brew install --HEAD php70-imagick
 brew install --HEAD php70-xhprof
